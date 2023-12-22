@@ -1,5 +1,18 @@
 var express = require('express');
 var router = express.Router();
+const multer  = require('multer')
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/uploads/')
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    cb(null, uniqueSuffix + ".png")
+  },
+})
+
+const upload = multer({ storage: storage })
 
 const mongojs = require('mongojs')
 const db = mongojs('bezeroakdb', ['bezeroak'])
@@ -27,9 +40,15 @@ router.get('/list', function(req, res, next) {
 });
 
 
-router.post("/new", (req, res) => {
-  users.push(req.body);
-  db.bezeroak.insert(req.body, function (err,user) {
+router.post("/new", upload.single('avatar'), (req, res, next) => {
+  if(req.file === undefined){
+    user = {"izena": req.body.izena, "abizena": req.body.abizena, "email": req.body.email, "id": Date.now() };
+  } else {
+    user = {"filename": req.file.filename, "izena": req.body.izena, "abizena": req.body.abizena, "email": req.body.email, "id": Date.now() };
+  }
+  
+  users.push(user);
+  db.bezeroak.insert(user, function (err,user) {
     if (err) {
       console.log(err)
     } else {
@@ -53,14 +72,17 @@ router.delete("/delete/:id", (req, res) => {
   res.json(users);
 });
 
-router.put("/update/:id", (req, res) => {
+router.put("/update/:id", upload.single('avatar'), (req, res) => {
   let user = users.find(user => user._id == req.params.id);
+  if(!(req.file === undefined)){
+    user.filename = req.file.filename
+  }
   user.izena = req.body.izena;
   user.abizena = req.body.abizena;
   user.email = req.body.email;
 
   db.bezeroak.update({ _id: mongojs.ObjectId(req.params.id) },
-    { $set: { izena: req.body.izena, abizena: req.body.abizena, email: req.body.email } },
+    { $set: {filename: user.filename, izena: req.body.izena, abizena: req.body.abizena, email: req.body.email } },
     function (err, user) {
       if (err) {
         console.log(err)
@@ -69,7 +91,7 @@ router.put("/update/:id", (req, res) => {
       }
     })
   
-  res.json(users); 
+  res.json(user); 
 })
 
 module.exports = router;

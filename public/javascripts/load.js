@@ -1,46 +1,46 @@
 let updateUser = (id) => {
-    let row = document.getElementById(id);
-    let izena = row.children[1].children[0].value;
-    let abizena = row.children[2].children[0].value;
-    let email = row.children[3].children[0].value;
-    row.innerHTML = `
-    <th scope="row">${id}</th>
-    <td>${izena}</td>
-    <td>${abizena}</td>
-    <td>${email}</td>
-    <td> <a onclick="deleteUser('${id}')">[x]</a> <a onclick="editUser('${id}')">[e]</a>  </td>
-    `;
 
-    let user = {
-        izena: izena,
-        abizena: abizena,
-        id: id,
-        email: email
-    }
+    let row = document.getElementById(id);
+    let irudia = row.children[1].children[0].files[0];
+    let izena = row.children[2].children[0].value;
+    let abizena = row.children[3].children[0].value;
+    let email = row.children[4].children[0].value;
+
+    var formData = new FormData();
+    formData.append('izena', izena);
+    formData.append('abizena', abizena);
+    formData.append('email', email);
+    formData.append('avatar', irudia);
+
 
     fetch(`/users/update/${id}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(user),
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log(data);  // handle the response data or action
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-    });
+      method: 'PUT',
+      body: formData,
+    }).then(res => res.json()).then(res => {
+      console.log("Fitxategi izena: " + res.filename);
+      if(res.filename === undefined){
+        irudi = "ezIrudi.png";
+      } else {
+        irudi = res.filename;
+      };
+      row.innerHTML=`<th scope="row">${res.id}</th>
+      <td><img width="30" src="uploads/${irudi}"/></td>
+      <td>${res.izena}</td>
+      <td>${res.abizena}</td>
+      <td>${res.email}</td>
+      <td> <a onclick="deleteUser('${id}')">[x]</a> <a onclick="editUser('${id}')">[e]</a>  </td>
+    `;})
 }
 
 let editUser = (id) => {
     let row = document.getElementById(id);
-    let izena = row.children[1].innerHTML;
-    let abizena = row.children[2].innerHTML;
-    let email = row.children[3].innerHTML;
+    let irudia = row.children[1].innerHTML;
+    let izena = row.children[2].innerHTML;
+    let abizena = row.children[3].innerHTML;
+    let email = row.children[4].innerHTML;
     row.innerHTML = `
     <th scope="row">${id}</th>
+    <td><input type="file" id="fitxategia" name="avatar"/></td>
     <td><input type="text" id="izena" value="${izena}"></td>
     <td><input type="text" id="abizena" value="${abizena}"></td>
     <td><input type="text" id="email" value="${email}"></td>
@@ -49,8 +49,13 @@ let editUser = (id) => {
 }
 
 let insertUser = (user) => {
-  var tableBody = document.getElementById("userTableBody");
+  if(user.filename === undefined){
+    irudi = "ezIrudi.png";
+  } else {
+    irudi = user.filename;
+  }
 
+  var tableBody = document.getElementById("userTableBody");
   // Loop through each user in the JSON array
 
   // Create a new row and set its innerHTML based on the user data
@@ -58,6 +63,7 @@ let insertUser = (user) => {
   newRow.setAttribute("id", user._id);
   newRow.innerHTML = `
                 <th scope="row">${user.id}</th>
+                <td><img width="30" src="uploads/${irudi}"/></td>
                 <td>${user.izena}</td>
                 <td>${user.abizena}</td>
                 <td>${user.email}</td>
@@ -84,6 +90,7 @@ let deleteUser = (id) => {
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("formularioa").addEventListener("submit", (e) => {
     e.preventDefault();
+    var formData = new FormData(document.forms.namedItem("formularioa"));
     
     let user = {
         izena: e.target.izena.value,
@@ -92,19 +99,14 @@ document.addEventListener("DOMContentLoaded", function () {
         email: e.target.email.value
     }
 
-    insertUser(user);
 
     fetch("/users/new", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user),
+      body: formData,
     })
       .then((response) => response.json())
-      .then((data) => {
-        console.log(data); // handle the response data or action
-      })
+      .then(erabiltzaile => insertUser(erabiltzaile))
+         // handle the response data or action
       .catch((error) => {
         console.error("Error:", error);
       });
